@@ -6,7 +6,16 @@ import useStore from "./store/useFilterStore";
 import TreeMap from "./components/TreemapEchart";
 import IndexSelector from "./components/IndexSelector";
 
-const Sidebar = ({ isOpen, setIsOpen, selectedIndex, onIndexChange, darkMode, setDarkMode, currentPage, onPageChange }) => (
+const Sidebar = ({
+  isOpen,
+  setIsOpen,
+  selectedIndex,
+  onIndexChange,
+  darkMode,
+  setDarkMode,
+  currentPage,
+  onPageChange,
+}) => (
   <>
     {/* Overlay */}
     {isOpen && (

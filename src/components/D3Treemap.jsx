@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   select,
   hierarchy,
@@ -6,15 +6,24 @@ import {
   scaleOrdinal,
   schemeCategory10,
   zoom,
+  zoomIdentity,
 } from "d3";
+import { debounce } from "lodash";
 
-// eslint-disable-next-line react/prop-types
 const D3Treemap = ({ data, error }) => {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
   const [currentZoom, setCurrentZoom] = useState(null);
   const [tooltipData, setTooltipData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+  const getPerformanceColor = useCallback((change) => {
+    if (change >= 2) return "#019a11";
+    if (change >= 1) return "#35d24b";
+    if (change >= -1) return "#959595";
+    if (change >= -2) return "#FF4747";
+    return "#ff0000";
+  }, []);
 
   useEffect(() => {
     if (!data) return;
@@ -44,14 +53,6 @@ const D3Treemap = ({ data, error }) => {
     tree(root);
 
     const sectorColorScale = scaleOrdinal(schemeCategory10);
-
-    const getPerformanceColor = (change) => {
-      if (change >= 2) return "#019a11";
-      if (change >= 1) return "#35d24b";
-      if (change >= -1) return "#959595";
-      if (change >= -2) return "#FF4747";
-      return "#ff0000";
-    };
 
     const sections = g
       .selectAll(".section")
@@ -97,9 +98,7 @@ const D3Treemap = ({ data, error }) => {
         setTooltipData(d);
         updateTooltipPosition(event);
       })
-      .on("mousemove", function (event) {
-        updateTooltipPosition(event);
-      })
+      .on("mousemove", updateTooltipPosition)
       .on("mouseout", function () {
         select(this).attr("stroke", "#fff");
         setTooltipData(null);
@@ -151,12 +150,13 @@ const D3Treemap = ({ data, error }) => {
       });
     }
 
-    updateLabels();
+    const debouncedUpdateLabels = debounce(updateLabels, 100);
 
     function handleZoom(event) {
       const { transform } = event;
       g.attr("transform", transform);
-      updateLabels();
+      debouncedUpdateLabels();
+      setCurrentZoom(root);
     }
 
     const z = zoom()
@@ -175,47 +175,47 @@ const D3Treemap = ({ data, error }) => {
 
     setCurrentZoom(root);
 
-    function updateTooltipPosition(event) {
-      if (tooltipRef.current) {
-        const tooltipRect = tooltipRef.current.getBoundingClientRect();
-        const svgRect = svgRef.current.getBoundingClientRect();
+    updateLabels();
 
-        let left = event.clientX + 10;
-        let top = event.clientY - 28;
-
-        // Adjust horizontal position if tooltip would overflow right edge
-        if (left + tooltipRect.width > svgRect.right) {
-          left = event.clientX - tooltipRect.width - 10;
-        }
-
-        // Adjust vertical position if tooltip would overflow bottom edge
-        if (top + tooltipRect.height > svgRect.bottom) {
-          top = event.clientY - tooltipRect.height - 10;
-        }
-
-        // Ensure tooltip doesn't go beyond the left or top edge
-        left = Math.max(svgRect.left, left);
-        top = Math.max(svgRect.top, top);
-
-        setTooltipPosition({ x: left, y: top });
-      }
-    }
-
-    const handleResize = () => {
+    const handleResize = debounce(() => {
       const newWidth = window.innerWidth - 100;
       const newHeight = window.innerHeight - 50;
       svg.attr("width", newWidth).attr("height", newHeight);
       tree.size([newWidth, newHeight]);
       tree(root);
       updateLabels();
-    };
+    }, 100);
 
     window.addEventListener("resize", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [data]);
+  }, [data, getPerformanceColor]);
+
+  const updateTooltipPosition = useCallback((event) => {
+    if (tooltipRef.current) {
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+      const svgRect = svgRef.current.getBoundingClientRect();
+
+      let left = event.clientX + 10;
+      let top = event.clientY - 28;
+
+      if (left + tooltipRect.width > svgRect.right) {
+        left = event.clientX - tooltipRect.width - 10;
+      }
+
+      if (top + tooltipRect.height > svgRect.bottom) {
+        top = event.clientY - tooltipRect.height - 10;
+      }
+
+      left = Math.max(svgRect.left, left);
+      top = Math.max(svgRect.top, top);
+
+      setTooltipPosition({ x: left, y: top });
+    }
+  }, []);
+
   if (error) return <div>Error: {error}</div>;
   if (!data) return <div>Loading...</div>;
 
@@ -232,7 +232,6 @@ const D3Treemap = ({ data, error }) => {
       {currentZoom && currentZoom.depth > 0 && (
         <div className="current-selection">
           <h3>Current Selection: {currentZoom.data.name}</h3>
-          {/* <p>Total Value: {d3.format(".2s")(currentZoom.value)}</p> */}
         </div>
       )}
       {tooltipData && (
@@ -252,8 +251,6 @@ const D3Treemap = ({ data, error }) => {
           <strong>{tooltipData.data.name}</strong>
           <br />
           <strong>{tooltipData.data.symbol}</strong>
-          <br />
-          {/* Value: {d3.format(".2s")(tooltipData.value)} */}
           <br />
           Sector: {tooltipData.parent.data.name}
           <br />
