@@ -1,16 +1,18 @@
-// src/services/s3Service.js
-
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Config } from "../config/awsconfig";
 
 const s3Client = new S3Client(s3Config);
 
-export const fetchLatestFileFromS3 = async () => {
+export const fetchLatestFileFromS3 = async (indexType = 'NIFTY500') => {
   try {
+    const metadataKey = indexType === 'NIFTY200' 
+      ? "metadata/nifty200_metadata.json" 
+      : "metadata/nifty500_metadata.json";
+
     // Fetch metadata.json
     const metadataCommand = new GetObjectCommand({
       Bucket: s3Config.bucketName,
-      Key: "metadata.json",
+      Key: metadataKey,
     });
 
     const metadataResponse = await s3Client.send(metadataCommand);

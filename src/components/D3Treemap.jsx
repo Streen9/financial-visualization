@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { fetchLatestFileFromS3 } from "../services/s3service";
 import {
   select,
   hierarchy,
@@ -9,26 +8,14 @@ import {
   zoom,
 } from "d3";
 
-const D3Treemap = () => {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
+// eslint-disable-next-line react/prop-types
+const D3Treemap = ({ data, error }) => {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
   const [currentZoom, setCurrentZoom] = useState(null);
   const [tooltipData, setTooltipData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const dataFetch = await fetchLatestFileFromS3();
-        setData(dataFetch);
-      } catch (err) {
-        setError(err.message);
-      }
-    };
 
-    fetchData();
-  }, []);
   useEffect(() => {
     if (!data) return;
 
