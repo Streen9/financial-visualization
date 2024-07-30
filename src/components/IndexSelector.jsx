@@ -1,36 +1,40 @@
 import PropTypes from 'prop-types';
+import { ButtonGroup, Button, styled } from '@mui/material';
+
+const StyledButton = styled(Button)(({ theme, selected }) => ({
+  padding: theme.spacing(1, 2),
+  fontSize: theme.typography.pxToRem(14),
+  fontWeight: theme.typography.fontWeightMedium,
+  backgroundColor: selected ? theme.palette.primary.main : theme.palette.background.paper,
+  color: selected ? theme.palette.primary.contrastText : theme.palette.text.primary,
+  '&:hover': {
+    backgroundColor: selected ? theme.palette.primary.dark : theme.palette.action.hover,
+  },
+  borderColor: theme.palette.divider,
+}));
+
 const IndexSelector = ({ selectedIndex, onIndexChange }) => {
   return (
-    <div className="inline-flex rounded-md shadow-sm" role="group">
-      <button
-        type="button"
-        className={`px-4 py-2 text-sm font-medium border rounded-l-lg focus:z-10 focus:ring-2 focus:ring-blue-500 
-        ${
-          selectedIndex === "NIFTY200"
-            ? "bg-blue-500 text-white hover:bg-blue-600"
-            : "bg-white text-gray-900 hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-        } border-gray-200 dark:border-gray-600`}
+    <ButtonGroup variant="outlined" aria-label="index selector">
+      <StyledButton
+        selected={selectedIndex === "NIFTY200"}
         onClick={() => onIndexChange("NIFTY200")}
       >
         NIFTY200
-      </button>
-      <button
-        type="button"
-        className={`px-4 py-2 text-sm font-medium border-t border-b focus:z-10 focus:ring-2 focus:ring-blue-500 
-        ${
-          selectedIndex === "NIFTY500"
-            ? "bg-blue-500 text-white hover:bg-blue-600"
-            : "bg-white text-gray-900 hover:bg-gray-100 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-        } border-gray-200 dark:border-gray-600`}
+      </StyledButton>
+      <StyledButton
+        selected={selectedIndex === "NIFTY500"}
         onClick={() => onIndexChange("NIFTY500")}
       >
         NIFTY500
-      </button>
-    </div>
+      </StyledButton>
+    </ButtonGroup>
   );
 };
+
 IndexSelector.propTypes = {
   selectedIndex: PropTypes.string.isRequired,
   onIndexChange: PropTypes.func.isRequired,
 };
+
 export default IndexSelector;
