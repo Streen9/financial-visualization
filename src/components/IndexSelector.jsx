@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 const IndexSelector = ({ selectedIndex, onIndexChange }) => {
   return (
     <div className="inline-flex rounded-md shadow-sm" role="group">
@@ -28,5 +29,8 @@ const IndexSelector = ({ selectedIndex, onIndexChange }) => {
     </div>
   );
 };
-
+IndexSelector.propTypes = {
+  selectedIndex: PropTypes.string.isRequired,
+  onIndexChange: PropTypes.func.isRequired,
+};
 export default IndexSelector;

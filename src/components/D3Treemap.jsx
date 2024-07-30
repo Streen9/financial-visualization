@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   select,
@@ -6,13 +7,14 @@ import {
   scaleOrdinal,
   schemeCategory10,
   zoom,
-  zoomIdentity,
+  pointer,
 } from "d3";
 import { debounce } from "lodash";
 
 const D3Treemap = ({ data, error }) => {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
+  const containerRef = useRef(null);
   const [currentZoom, setCurrentZoom] = useState(null);
   const [tooltipData, setTooltipData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -23,6 +25,33 @@ const D3Treemap = ({ data, error }) => {
     if (change >= -1) return "#959595";
     if (change >= -2) return "#FF4747";
     return "#ff0000";
+  }, []);
+
+  const updateTooltipPosition = useCallback((event) => {
+    if (!containerRef.current || !tooltipRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const [mouseX, mouseY] = pointer(event, containerRef.current);
+
+    let x = mouseX + 10;
+    let y = mouseY - 10;
+
+    // Adjust x-position if tooltip goes beyond right edge
+    if (x + tooltipRect.width > containerRect.width) {
+      x = mouseX - tooltipRect.width - 10;
+    }
+
+    // Adjust y-position if tooltip goes beyond bottom edge
+    if (y + tooltipRect.height > containerRect.height) {
+      y = mouseY - tooltipRect.height - 10;
+    }
+
+    // Ensure tooltip doesn't go beyond left or top edges
+    x = Math.max(0, x);
+    y = Math.max(0, y);
+
+    setTooltipPosition({ x, y });
   }, []);
 
   useEffect(() => {
@@ -93,13 +122,13 @@ const D3Treemap = ({ data, error }) => {
       .attr("height", (d) => d.y1 - d.y0)
       .attr("fill", (d) => getPerformanceColor(d.data.changes["1d"]))
       .attr("stroke", "#fff")
-      .on("mouseover", function (event, d) {
+      .on("mouseenter", function (event, d) {
         select(this).attr("stroke", "#000");
         setTooltipData(d);
         updateTooltipPosition(event);
       })
       .on("mousemove", updateTooltipPosition)
-      .on("mouseout", function () {
+      .on("mouseleave", function () {
         select(this).attr("stroke", "#fff");
         setTooltipData(null);
       });
@@ -191,41 +220,22 @@ const D3Treemap = ({ data, error }) => {
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [data, getPerformanceColor]);
-
-  const updateTooltipPosition = useCallback((event) => {
-    if (tooltipRef.current) {
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-      const svgRect = svgRef.current.getBoundingClientRect();
-
-      let left = event.clientX + 10;
-      let top = event.clientY - 28;
-
-      if (left + tooltipRect.width > svgRect.right) {
-        left = event.clientX - tooltipRect.width - 10;
-      }
-
-      if (top + tooltipRect.height > svgRect.bottom) {
-        top = event.clientY - tooltipRect.height - 10;
-      }
-
-      left = Math.max(svgRect.left, left);
-      top = Math.max(svgRect.top, top);
-
-      setTooltipPosition({ x: left, y: top });
-    }
-  }, []);
+  }, [data, getPerformanceColor, updateTooltipPosition]);
 
   if (error) return <div>Error: {error}</div>;
   if (!data) return <div>Loading...</div>;
 
   return (
     <div
+      ref={containerRef}
       className="treemap-container"
       style={{
         display: "flex",
         justifyContent: "center",
         position: "relative",
+        width: "100%",
+        height: "100vh",
+        overflow: "hidden",
       }}
     >
       <svg ref={svgRef}></svg>
@@ -238,14 +248,18 @@ const D3Treemap = ({ data, error }) => {
         <div
           ref={tooltipRef}
           style={{
-            position: "fixed",
+            position: "absolute",
             left: `${tooltipPosition.x}px`,
             top: `${tooltipPosition.y}px`,
             backgroundColor: "white",
             border: "1px solid black",
             borderRadius: "5px",
             padding: "10px",
+            pointerEvents: "none",
             zIndex: 1000,
+            transition: "left 0.1s, top 0.1s",
+            maxWidth: "200px",
+            wordWrap: "break-word",
           }}
         >
           <strong>{tooltipData.data.name}</strong>
@@ -259,6 +273,10 @@ const D3Treemap = ({ data, error }) => {
       )}
     </div>
   );
+};
+D3Treemap.propTypes = {
+  data: PropTypes.shape({}),
+  error: PropTypes.string,
 };
 
 export default D3Treemap;
